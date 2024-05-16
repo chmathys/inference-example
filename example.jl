@@ -30,6 +30,8 @@ using StatsBase
 using DataFrames
 using StatsPlots
 using HypothesisTests
+using Random
+Random.seed!(1234)
 
 # %% [markdown]
 # ## The data
@@ -147,7 +149,7 @@ prior_predictive_design = gaussians(repeat([missing], 8_000), repeat([1], 8_000)
 # After defining our prior predictive design, we take eight samples corresponding to eight fictitious manufacturers:
 
 # %%
-prior_predictive_sample = sample(prior_predictive_design, Prior(), 8)
+prior_predictive_sample = sample(prior_predictive_design, Prior(), 8);
 
 # %% [markdown]
 # We now need to do a bit of manipulation on our simulated data in order to arrange the eight samples of predicted log-lifetimes as the columns of an 8000-by-8 matrix. 
@@ -241,7 +243,7 @@ posterior_sample = sample(data_design, NUTS(), 8_000, n_chains = 4)
 # In addition to the numeric diagnostic values above, we plot our chains to get a visual impression: 
 
 # %%
-plot(posterior_sample, linewidth = 3, color = :darkred, fill = (0, 0.3, :darkred))
+plot(posterior_sample, linewidth = 3, color = :darkred, fill = (0, 0.3, :darkmagenta))
 
 
 # %% [markdown]
@@ -257,16 +259,26 @@ plot(posterior_sample, linewidth = 3, color = :darkred, fill = (0, 0.3, :darkred
 
 # %%
 # Transform to observation scale
-mean_a = exp.(StatsBase.reconstruct(zed, posterior_sample["α[1]"]))
-mean_b = exp.(StatsBase.reconstruct(zed, posterior_sample["α[2]"]))
+mean_a = exp.(StatsBase.reconstruct(zed, posterior_sample["α[1]"]));
+mean_b = exp.(StatsBase.reconstruct(zed, posterior_sample["α[2]"]));
 
 # %%
-# Probability that *median* lifetime from B is greater
+# Posterior distribution of difference between means
+Δmeans = mean_b - mean_a;
+
+# %%
+density(Δmeans, ylabel = "Density", xlabel = "Difference between means from B and A", labels = "Δmeans", linewidth = 2, fill = (0, 0.3), color = :darkmagenta)
+
+# %% [markdown]
+#
+
+# %%
+# Probability that *mean* lifetime from B is greater
 sum(mean_b - mean_a .> 0) / length(posterior_sample)
 
 
 # %%
-# Probability that *median* lifetime from B is more than 3 hours greater
+# Probability that *mean* lifetime from B is more than 3 hours greater
 sum(mean_b - mean_a .> 3) / length(posterior_sample)
 
 # %% [markdown]
@@ -319,8 +331,14 @@ density(posterior_predictive_lifetime, labels = ["A" "B"], ylabel = "Density", x
 # Finally, we can compare predicted lifetimes.
 
 # %%
-t_a = posterior_predictive_lifetime[:, 1]
-t_b = posterior_predictive_lifetime[:, 2]
+t_a = posterior_predictive_lifetime[:, 1];
+t_b = posterior_predictive_lifetime[:, 2];
+
+# %%
+Δt = t_b - t_a;
+
+# %%
+density(Δt, ylabel = "Density", xlabel = "Difference of lifetime between B and A", labels = "Δt", linewidth = 2, fill = (0, 0.3), color = :darkmagenta)
 
 # %%
 # Probability that when randomly choosing a part from each manufacturer,
